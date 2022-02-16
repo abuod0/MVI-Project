@@ -2,17 +2,18 @@ import cv2
 import numpy as np
 from time import sleep
 
-min_width = 80
-Height_min = 80
+min_width = 10
+Height_min = 10
 
-offset = -23
+offset = 1
 
-Line_pos = 580
+Line_pos = 6
 
-delay = 60 #fps
+delay = 60
 
-detec = []
-nuts = 0
+detect = []
+Bolts = 0
+
 
 def pega_centro(x, y, w, h):
     x1 = int(w / 2)
@@ -21,9 +22,12 @@ def pega_centro(x, y, w, h):
     cy = y + y1
     return cx, cy
 
-#url =('https://192.168.0.190:8080/video')
-cap = cv2.VideoCapture('33.mp4')
-subtracao = cv2.bgsegm.createBackgroundSubtractorMOG()
+
+
+
+# url =('https://192.168.0.190:8080/video')
+cap = cv2.VideoCapture('Bolts.mp4')
+subtracao = cv2.createBackgroundSubtractorMOG2()
 
 while True:
     ret, frame1 = cap.read()
@@ -36,9 +40,9 @@ while True:
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
     dilatada = cv2.morphologyEx(dilat, cv2.MORPH_CLOSE, kernel)
     ret, bin_img = cv2.threshold(dilatada, 250, 255, cv2.THRESH_BINARY_INV)
-    canny= cv2.Canny(bin_img, 250, 255)
-    #dilatada = cv2.morphologyEx(blur, cv2.MORPH_CLOSE, kernel)
-    contours, h = cv2.findContours(canny, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    canny = cv2.Canny(bin_img, 250, 255)
+    # dilatada = cv2.morphologyEx(blur, cv2.MORPH_CLOSE, kernel)
+    contours, h = cv2.findContours(dilat, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     contours = sorted(contours, key=cv2.contourArea, reverse=True)
 
     cv2.line(frame1, (Line_pos, 100), (Line_pos, 350), (255, 255, 0), 5)
@@ -48,40 +52,37 @@ while True:
         x = approx.ravel()[0]
         y = approx.ravel()[1] - 5
         x1, y1, w, h = cv2.boundingRect(approx)
-        aspectRatio = float(w)/h
+        aspectRatio = float(w) / h
         print(aspectRatio)
 
-
-
-
-        if (aspectRatio) >= 0 and (aspectRatio) < 1.1:
-            cv2.putText(frame1, "Cap", (x, y), cv2.FONT_HERSHEY_COMPLEX, 2, (0, 0, 0))
-        elif (aspectRatio) >= 1.25 and (aspectRatio) <= 1.35:
-            cv2.putText(frame1, "Flange", (x, y), cv2.FONT_HERSHEY_COMPLEX, 2, (0, 0, 0))
-        elif (aspectRatio) >= 1.36:
-            cv2.putText(frame1, "Wing", (x, y), cv2.FONT_HERSHEY_COMPLEX, 2, (0, 0, 0))
+        if (aspectRatio) >= 0.2 and (aspectRatio) < 0.4 :
+            cv2.putText(frame1, "Slotted Head", (x, y), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0))
+        elif (aspectRatio) >= 0.4 and (aspectRatio) <= 0.47:
+            cv2.putText(frame1, "External Hex", (x, y), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0))
+        elif (aspectRatio) >0.48:
+            cv2.putText(frame1, "Dome Head", (x, y), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0))
 
         (x, y, w, h) = cv2.boundingRect(cnt)
         validar_cnt = (w >= min_width) and (h >= Height_min)
         if not validar_cnt:
             continue
 
-        cv2.rectangle(frame1, (x, y), (x + w, y + h), (255, 0, 255), 2)
+        cv2.rectangle(frame1, (x, y), (x + w, y + h), (0, 255, 255), 2)
         centro = pega_centro(x, y, w, h)
-        detec.append(centro)
+        detect.append(centro)
         cv2.circle(frame1, centro, 6, (255, 255, 255), 2)
 
-        for (x, y) in detec:
-            if x > (Line_pos + offset): #and x > (Line_pos - offset):
-                nuts += 1
-                #cv2.line(frame1, (Line_pos, 100), (Line_pos, 350), (0, 255, 255), 9)
+        for (x, y) in detect:
+            if x < (Line_pos + offset):  # and x > (Line_pos - offset):
+                Bolts += 1
+                # cv2.line(frame1, (Line_pos, 100), (Line_pos, 350), (0, 255, 255), 9)
                 cv2.line(frame1, (Line_pos, 100), (Line_pos, 350), (255, 255, 0), 5)
-                detec.remove((x, y))
-                print("Nut is detected : " + str(nuts))
+                detect.remove((x, y))
+                print("Bolt is detected : " + str(Bolts))
 
-    cv2.putText(frame1, "Nut Detected :" + str(nuts), (30, 70), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 5)
+    cv2.putText(frame1, "Bolt Detected:" + str(Bolts), (5, 50), cv2.FONT_HERSHEY_COMPLEX_SMALL, 2, (0, 0, 255), 2)
     cv2.imshow("Video Original", frame1)
-    cv2.imshow("Detectar", dilat)
+    cv2.imshow("Detector", dilat)
     cv2.imshow("can", canny)
     cv2.imshow("bin", bin_img)
 
